@@ -18,19 +18,19 @@ func main() {
 	}
 
 	inputURL := os.Args[1]
-	maxPages, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		fmt.Printf("Error - maxPages: %v", err)
-		os.Exit(1)
-	}
-
-	maxConcurrency, err := strconv.Atoi(os.Args[3])
+	maxConcurrency, err := strconv.Atoi(os.Args[2])
 	if err != nil {
 		fmt.Printf("Error - maxConcurrency: %v", err)
 		os.Exit(1)
 	}
 
-	cfg, err := newCrawler(inputURL, maxPages, maxConcurrency)
+	maxPages, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		fmt.Printf("Error - maxPages: %v", err)
+		os.Exit(1)
+	}
+
+	cfg, err := newCrawler(inputURL, maxConcurrency, maxPages)
 
 	if err != nil {
 		fmt.Printf("Error - configure: %v", err)

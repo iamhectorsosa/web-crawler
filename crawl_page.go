@@ -7,7 +7,6 @@ import (
 )
 
 type config struct {
-	pageCount          int
 	maxPages           int
 	pages              map[string]int
 	baseURL            *url.URL
@@ -16,14 +15,13 @@ type config struct {
 	wg                 *sync.WaitGroup
 }
 
-func newCrawler(rawBaseURL string, maxPages, maxConcurrency int) (*config, error) {
+func newCrawler(rawBaseURL string, maxConcurrency, maxPages int) (*config, error) {
 	baseURL, err := url.Parse(rawBaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't parse base URL: %v", err)
 	}
 
 	return &config{
-		pageCount:          0,
 		maxPages:           maxPages,
 		pages:              make(map[string]int),
 		baseURL:            baseURL,
@@ -31,13 +29,6 @@ func newCrawler(rawBaseURL string, maxPages, maxConcurrency int) (*config, error
 		concurrencyControl: make(chan struct{}, maxConcurrency),
 		wg:                 &sync.WaitGroup{},
 	}, nil
-}
-
-func (cfg *config) addPageCount() {
-	cfg.mu.Lock()
-	defer cfg.mu.Unlock()
-
-	cfg.pageCount++
 }
 
 func (cfg *config) addPageVisit(url string) (isFirst bool) {
@@ -53,6 +44,12 @@ func (cfg *config) addPageVisit(url string) (isFirst bool) {
 	return true
 }
 
+func (cfg *config) checkMaxPages() bool {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+	return len(cfg.pages) < cfg.maxPages
+}
+
 func (cfg *config) acquire() {
 	cfg.concurrencyControl <- struct{}{}
 }
@@ -66,6 +63,10 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 	cfg.acquire()
 	defer cfg.release()
 
+	if ok := cfg.checkMaxPages(); !ok {
+		return
+	}
+
 	currentURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("couldn't parse URL: %s, %v\n", currentURL, err)
@@ -75,12 +76,6 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 	if cfg.baseURL.Host != currentURL.Host {
 		return
 	}
-
-	if cfg.pageCount >= cfg.maxPages {
-		return
-	}
-
-	cfg.addPageCount()
 
 	normalizedURL, err := normalizeURL(rawCurrentURL)
 	if err != nil {
