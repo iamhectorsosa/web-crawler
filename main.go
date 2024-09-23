@@ -41,7 +41,5 @@ func main() {
 	go cfg.crawlPage(inputURL)
 	cfg.wg.Wait()
 
-	for url, count := range cfg.pages {
-		fmt.Printf("%s - %d\n", url, count)
-	}
+	printReport(cfg.pages, inputURL)
 }
