@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func parseHTML(inputURL string) (string, error) {
@@ -18,8 +19,9 @@ func parseHTML(inputURL string) (string, error) {
 		return "", fmt.Errorf("status code: %d", resp.StatusCode)
 	}
 
-	if resp.Header.Get("Content-Type") != "text/html" {
-		return "", fmt.Errorf("invalid content type: %s", resp.Header.Get("Content-Type"))
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.Contains(contentType, "text/html") {
+		return "", fmt.Errorf("invalid content type: %s", contentType)
 	}
 
 	body, err := io.ReadAll(resp.Body)

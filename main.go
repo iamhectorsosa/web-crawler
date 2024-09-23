@@ -6,12 +6,12 @@ import (
 )
 
 func main() {
-	if len(os.Args) == 0 {
+	if len(os.Args) < 2 {
 		fmt.Println("no website provided")
 		os.Exit(1)
 	}
 
-	if len(os.Args) > 1 {
+	if len(os.Args) > 2 {
 		fmt.Println("too many arguments provided")
 		os.Exit(1)
 	}
@@ -19,19 +19,11 @@ func main() {
 	inputURL := os.Args[1]
 	fmt.Printf("starting crawl of: %s...\n", inputURL)
 
-	body, err := parseHTML(inputURL)
-	if err != nil {
-		fmt.Printf("error parsing HTML: %v\n", err)
-		os.Exit(1)
-	}
+	pages := make(map[string]int)
 
-	urls, err := getURLsFromHTML(string(body), inputURL)
-	if err != nil {
-		fmt.Printf("error getting URLs from body: %v\n", err)
-		os.Exit(1)
-	}
+	crawlPage(inputURL, inputURL, pages)
 
-	for _, url := range urls {
-		fmt.Println(url)
+	for url, count := range pages {
+		fmt.Printf("%s - %d\n", url, count)
 	}
 }
