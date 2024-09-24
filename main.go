@@ -3,43 +3,64 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
+
+	"github.com/spf13/cobra"
 )
 
+var rootCmd = &cobra.Command{
+	Use:   "mygo [command]",
+	Short: "Mygo Crawl is a Go-based Web Crawler tool for HTML analysis.",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
+var mvp = &cobra.Command{
+	Use:   "mvp [url]",
+	Short: "Get the most linked-to URLs (MVPs) from a website.",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
+			return fmt.Errorf("Need to specify website's base URL: %v", err)
+		}
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		baseURL := args[0]
+		concurrency, err := cmd.Flags().GetInt("concurrency")
+		if err != nil {
+			return err
+		}
+		maxPages, err := cmd.Flags().GetInt("max-pages")
+		if err != nil {
+			return err
+		}
+
+		cfg, err := newCrawler(baseURL, concurrency, maxPages)
+
+		if err != nil {
+			return err
+		}
+
+		cfg.wg.Add(1)
+		go cfg.crawlPage(baseURL)
+		cfg.wg.Wait()
+
+		printReport(cfg.pages, baseURL)
+		return nil
+	},
+}
+
+func init() {
+	mvp.Flags().IntP("concurrency", "c", 12, "concurrency capacity for analysis")
+	mvp.Flags().IntP("max-pages", "m", 120, "maximum number of pages for analysis")
+	rootCmd.AddCommand(mvp)
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+}
+
 func main() {
-	if len(os.Args) < 4 {
-		fmt.Println("too few arguments provided")
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	if len(os.Args) > 4 {
-		fmt.Println("too many arguments provided")
-		os.Exit(1)
-	}
-
-	inputURL := os.Args[1]
-	maxConcurrency, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		fmt.Printf("Error - maxConcurrency: %v", err)
-		os.Exit(1)
-	}
-
-	maxPages, err := strconv.Atoi(os.Args[3])
-	if err != nil {
-		fmt.Printf("Error - maxPages: %v", err)
-		os.Exit(1)
-	}
-
-	cfg, err := newCrawler(inputURL, maxConcurrency, maxPages)
-
-	if err != nil {
-		fmt.Printf("Error - configure: %v", err)
-		os.Exit(1)
-	}
-
-	cfg.wg.Add(1)
-	go cfg.crawlPage(inputURL)
-	cfg.wg.Wait()
-
-	printReport(cfg.pages, inputURL)
 }

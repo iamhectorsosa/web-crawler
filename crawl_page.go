@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"sync"
+
+	"github.com/charmbracelet/log"
 )
 
 type config struct {
@@ -69,7 +71,7 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 
 	currentURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
-		fmt.Printf("couldn't parse URL: %s, %v\n", currentURL, err)
+		log.Error("failed to parse URL", "url", rawCurrentURL, "err", err)
 		return
 	}
 
@@ -79,7 +81,7 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 
 	normalizedURL, err := normalizeURL(rawCurrentURL)
 	if err != nil {
-		fmt.Printf("couldn't normalize URL: %s, %v\n", normalizedURL, err)
+		log.Error("failed to normalize URL", "url", rawCurrentURL, "err", err)
 		return
 	}
 
@@ -87,16 +89,16 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 		return
 	}
 
-	fmt.Printf("crawling: %s\n", normalizedURL)
+	log.Info("crawling", "url", normalizedURL)
 	htmlBody, err := parseHTML(rawCurrentURL)
 	if err != nil {
-		fmt.Printf("couldn't parse HTML: %s, %v\n", normalizedURL, err)
+		log.Error("failed to crawl", "url", normalizedURL, "err", err)
 		return
 	}
 
 	urls, err := getURLsFromHTML(htmlBody, cfg.baseURL.String())
 	if err != nil {
-		fmt.Printf("couldn't get URLs from HTML at: %s, %s\n", normalizedURL, err)
+		log.Error("failed to collect internal URLs", "url", normalizedURL, "err", err)
 		return
 	}
 
