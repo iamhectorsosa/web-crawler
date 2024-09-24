@@ -12,11 +12,10 @@ func parseHTML(inputURL string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error fetching URL: %v", err)
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("status code: %d", resp.StatusCode)
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	contentType := resp.Header.Get("Content-Type")
