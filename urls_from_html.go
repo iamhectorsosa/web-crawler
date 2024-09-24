@@ -30,7 +30,8 @@ func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
 					hrefUrl := attr.Val
 					parsedURL, err := url.Parse(hrefUrl)
 					hasValidScheme := (parsedURL.Scheme == "" || parsedURL.Scheme == "http" || parsedURL.Scheme == "https")
-					if err == nil && hasValidScheme {
+					isHash := parsedURL.Fragment != "" && parsedURL.Path == "" && parsedURL.Host == ""
+					if err == nil && hasValidScheme && !isHash {
 						// If ref is absolute URL, then ignores base and return copy of ref
 						resolvedURL := baseURL.ResolveReference(parsedURL)
 						hrefs = append(hrefs, resolvedURL.String())
