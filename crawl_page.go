@@ -32,8 +32,8 @@ func crawl(rawBaseURL string, concurrency, maxPages int) (*config, error) {
 		wg:                 &sync.WaitGroup{},
 	}
 
-	log.Info("Starting crawl", "baseUrl", rawBaseURL, "concurrency", concurrency, "maxPages", maxPages)
-	fmt.Println("")
+	logger := log.WithPrefix("STARTING CRAWLER")
+	logger.Print("parameters", "baseUrl", rawBaseURL, "concurrency", concurrency, "maxPages", maxPages)
 
 	config.wg.Add(1)
 	go config.crawlPage(rawBaseURL)
