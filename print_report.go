@@ -59,31 +59,11 @@ func printReport(pages map[string]int, baseURL string) {
 		})
 
 	fmt.Print(table)
-
-	err := generateCSVReport(sortedPages, "report.csv")
-	if err != nil {
-		log.Error("failed to generate CSV report", "err", err)
-	}
-
-	fmt.Println("")
-	log.Info("CSV Report generated", "url", baseURL, "filepath", "report.csv")
 }
 
-func sortPages(pages map[string]int) []Page {
-	pagesSlice := []Page{}
-	for url, count := range pages {
-		pagesSlice = append(pagesSlice, Page{URL: url, Count: count})
-	}
-	sort.Slice(pagesSlice, func(i, j int) bool {
-		if pagesSlice[i].Count == pagesSlice[j].Count {
-			return pagesSlice[i].URL < pagesSlice[j].URL
-		}
-		return pagesSlice[i].Count > pagesSlice[j].Count
-	})
-	return pagesSlice
-}
+func generateCSVReport(pages map[string]int, filename string, baseURL string) error {
+	sortedPages := sortPages(pages)
 
-func generateCSVReport(pages []Page, filename string) error {
 	// Create a new CSV file
 	file, err := os.Create(filename)
 	if err != nil {
@@ -102,12 +82,29 @@ func generateCSVReport(pages []Page, filename string) error {
 	}
 
 	// Write the page data to the CSV file
-	for _, page := range pages {
+	for _, page := range sortedPages {
 		row := []string{page.URL, strconv.Itoa(page.Count)}
 		if err := writer.Write(row); err != nil {
 			return err
 		}
 	}
 
+	fmt.Println("")
+	log.Info("CSV Report generated", "url", baseURL, "filepath", "report.csv")
+
 	return nil
+}
+
+func sortPages(pages map[string]int) []Page {
+	pagesSlice := []Page{}
+	for url, count := range pages {
+		pagesSlice = append(pagesSlice, Page{URL: url, Count: count})
+	}
+	sort.Slice(pagesSlice, func(i, j int) bool {
+		if pagesSlice[i].Count == pagesSlice[j].Count {
+			return pagesSlice[i].URL < pagesSlice[j].URL
+		}
+		return pagesSlice[i].Count > pagesSlice[j].Count
+	})
+	return pagesSlice
 }

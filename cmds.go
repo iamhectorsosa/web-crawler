@@ -34,6 +34,10 @@ var mvp = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		printCSV, err := cmd.Flags().GetBool("print")
+		if err != nil {
+			return err
+		}
 
 		cfg, err := crawl(baseURL, concurrency, maxPages)
 
@@ -42,6 +46,13 @@ var mvp = &cobra.Command{
 		}
 
 		printReport(cfg.pages, baseURL)
+
+		if printCSV {
+			if err := generateCSVReport(cfg.pages, "report.csv", baseURL); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	},
 }
@@ -49,6 +60,7 @@ var mvp = &cobra.Command{
 func init() {
 	mvp.Flags().IntP("concurrency", "c", 12, "concurrency capacity for analysis")
 	mvp.Flags().IntP("max-pages", "m", 120, "maximum number of pages for analysis")
+	mvp.Flags().BoolP("print", "p", false, "print CSV report")
 	rootCmd.AddCommand(mvp)
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }
