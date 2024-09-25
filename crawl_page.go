@@ -17,20 +17,44 @@ type config struct {
 	wg                 *sync.WaitGroup
 }
 
-func newCrawler(rawBaseURL string, maxConcurrency, maxPages int) (*config, error) {
+func crawl(rawBaseURL string, concurrency, maxPages int) (*config, error) {
 	baseURL, err := url.Parse(rawBaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't parse base URL: %v", err)
 	}
 
-	return &config{
+	config := &config{
 		maxPages:           maxPages,
 		pages:              make(map[string]int),
 		baseURL:            baseURL,
 		mu:                 &sync.Mutex{},
-		concurrencyControl: make(chan struct{}, maxConcurrency),
+		concurrencyControl: make(chan struct{}, concurrency),
 		wg:                 &sync.WaitGroup{},
-	}, nil
+	}
+
+	log.Info("Starting crawl", "baseUrl", rawBaseURL, "concurrency", concurrency, "maxPages", maxPages)
+	fmt.Println("")
+
+	config.wg.Add(1)
+	go config.crawlPage(rawBaseURL)
+	config.wg.Wait()
+
+	return config, nil
+}
+
+func (cfg *config) acquire() {
+	cfg.concurrencyControl <- struct{}{}
+}
+
+func (cfg *config) release() {
+	<-cfg.concurrencyControl
+	cfg.wg.Done()
+}
+
+func (cfg *config) checkMaxPages() bool {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+	return len(cfg.pages) < cfg.maxPages
 }
 
 func (cfg *config) addPageVisit(url string) (isFirst bool) {
@@ -44,21 +68,6 @@ func (cfg *config) addPageVisit(url string) (isFirst bool) {
 
 	cfg.pages[url] = 1
 	return true
-}
-
-func (cfg *config) checkMaxPages() bool {
-	cfg.mu.Lock()
-	defer cfg.mu.Unlock()
-	return len(cfg.pages) < cfg.maxPages
-}
-
-func (cfg *config) acquire() {
-	cfg.concurrencyControl <- struct{}{}
-}
-
-func (cfg *config) release() {
-	<-cfg.concurrencyControl
-	cfg.wg.Done()
 }
 
 func (cfg *config) crawlPage(rawCurrentURL string) {
@@ -89,7 +98,7 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 		return
 	}
 
-	log.Info("crawling", "url", normalizedURL)
+	log.Info("crawling", "url", normalizedURL, "limit", fmt.Sprintf("%d/%d", len(cfg.pages), cfg.maxPages))
 	htmlBody, err := parseHTML(rawCurrentURL)
 	if err != nil {
 		log.Error("failed to crawl", "url", normalizedURL, "err", err)

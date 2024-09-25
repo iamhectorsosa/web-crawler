@@ -18,37 +18,47 @@ type Page struct {
 	Count int
 }
 
-func printReport(pages map[string]int, baseURL string) {
-	logStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("246")).Padding(0, 1)
+var mutedText = lipgloss.NewStyle().Foreground(lipgloss.Color("246"))
 
+func printReport(pages map[string]int, baseURL string) {
 	var title strings.Builder
 	fmt.Fprintf(&title, "\nREPORT for %s", baseURL)
-	fmt.Println(logStyle.Render(title.String()))
+	fmt.Println(mutedText.Padding(0, 1).Render(title.String()))
 
 	sortedPages := sortPages(pages)
 
 	columns := []string{"URL", "Count"}
 	rows := make([][]string, 0, len(sortedPages))
-
+	totalCount := 0
 	for _, page := range sortedPages {
+		totalCount += page.Count
 		rows = append(rows, []string{
 			page.URL,
 			strconv.Itoa(page.Count),
 		})
 	}
 
-	t := table.New().
+	rows = append(rows, []string{
+		"Total count",
+		strconv.Itoa(totalCount),
+	})
+
+	table := table.New().
 		Border(lipgloss.HiddenBorder()).
 		Headers(columns...).
 		Rows(rows...).
 		StyleFunc(func(row, col int) lipgloss.Style {
-			if row%2 == 0 {
-				return lipgloss.NewStyle().Foreground(lipgloss.Color("246")).MarginRight(6)
+			if row%2 == 0 && row != len(rows) {
+				return mutedText.MarginRight(6)
+			}
+			// Summary row
+			if row == len(rows) {
+				return mutedText.MarginRight(6).MarginTop(1)
 			}
 			return lipgloss.NewStyle()
 		})
 
-	fmt.Print(t)
+	fmt.Print(table)
 
 	err := generateCSVReport(sortedPages, "report.csv")
 	if err != nil {
@@ -56,7 +66,6 @@ func printReport(pages map[string]int, baseURL string) {
 	}
 
 	fmt.Println("")
-
 	log.Info("CSV Report generated", "url", baseURL, "filepath", "report.csv")
 }
 

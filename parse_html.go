@@ -14,10 +14,12 @@ func parseHTML(inputURL string) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	// Only accept status 200
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
+	// Only accept text/html
 	contentType := resp.Header.Get("Content-Type")
 	if !strings.Contains(contentType, "text/html") {
 		return "", fmt.Errorf("invalid content type: %s", contentType)
