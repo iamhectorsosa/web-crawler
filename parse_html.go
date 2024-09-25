@@ -4,11 +4,41 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
+// Helper function to normalize URL by stripping "www" prefix
+func normalizeHost(u *url.URL) string {
+	host := u.Hostname()
+	if strings.HasPrefix(host, "www.") {
+		host = strings.TrimPrefix(host, "www.")
+	}
+	return host
+}
+
 func parseHTML(inputURL string) (string, error) {
-	resp, err := http.Get(inputURL)
+	// Parse baseURL to compare later
+	base, err := url.Parse(inputURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid base URL: %v", err)
+	}
+
+	// Initialize a custom HTTP client with redirect checking
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Parse the redirected URL
+			redirectedURL := req.URL
+			if normalizeHost(base) != normalizeHost(redirectedURL) {
+				return fmt.Errorf("redirect to external URL: %s", redirectedURL.String())
+			}
+			// Allow the redirect to continue
+			return nil
+		},
+	}
+
+	// Make the GET request
+	resp, err := client.Get(inputURL)
 	if err != nil {
 		return "", fmt.Errorf("error fetching URL: %v", err)
 	}
